@@ -122,7 +122,7 @@ function ScoreboardApp() {
             {home.sets.map((score, idx) =>
               renderSetCell(score, idx, idx === home.currentSetIndex, "home")
             )}
-            {Array.from({ length: 4 - home.sets.length }).map((_, idx) => (
+            {Array.from({ length: 6 - home.sets.length }).map((_, idx) => (
               <div key={`home-empty-${idx}`} className="rounded-sm bg-muted" />
             ))}
             {/* Server indicator: tennis ball */}
@@ -137,7 +137,7 @@ function ScoreboardApp() {
             {away.sets.map((score, idx) =>
               renderSetCell(score, idx, idx === away.currentSetIndex, "away")
             )}
-            {Array.from({ length: 4 - away.sets.length }).map((_, idx) => (
+            {Array.from({ length: 6 - away.sets.length }).map((_, idx) => (
               <div key={`away-empty-${idx}`} className="rounded-sm bg-muted" />
             ))}
             <div className="relative flex items-center justify-center">
