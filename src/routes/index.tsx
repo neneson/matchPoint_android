@@ -61,9 +61,11 @@ function ScoreboardApp() {
 
   const updateSet = useCallback(
     (which: "home" | "away", setIndex: number, delta: number) => {
-      const [player, setPlayer] = which === "home" ? [home, setHome] : [away, setAway];
+      const player = which === "home" ? home : away;
+      const setPlayer = which === "home" ? setHome : setAway;
       const nextSets = [...player.sets];
-      nextSets[setIndex] = Math.max(0, nextSets[setIndex] + delta);
+      const current = nextSets[setIndex] ?? 0;
+      nextSets[setIndex] = Math.max(0, current + delta);
       setPlayer({ ...player, sets: nextSets });
     },
     [home, away]
