@@ -43,8 +43,10 @@ function ScoreboardApp() {
 
   const updatePoints = useCallback(
     (which: "home" | "away", delta: number) => {
-      const [player, setPlayer] = which === "home" ? [home, setHome] : [away, setAway];
-      const [opponent, setOpponent] = which === "home" ? [away, setAway] : [home, setHome];
+      const player = which === "home" ? home : away;
+      const setPlayer = which === "home" ? setHome : setAway;
+      const opponent = which === "home" ? away : home;
+      const setOpponent = which === "home" ? setAway : setHome;
 
       const nextPoints = Math.max(0, Math.min(POINTS.length - 1, player.gamePoints + delta));
 
