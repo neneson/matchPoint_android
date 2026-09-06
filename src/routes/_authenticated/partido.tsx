@@ -93,12 +93,14 @@ function ScoreboardApp() {
   );
 
   const renderSetCell = (
+    key: string,
     value: number,
     setIndex: number,
     isActive: boolean,
     which: "home" | "away"
   ) => (
     <button
+      key={key}
       type="button"
       onClick={() => updateSet(which, setIndex, 1)}
       onContextMenu={(e) => {
@@ -125,7 +127,7 @@ function ScoreboardApp() {
           <div className="grid h-[160px] w-[320px] grid-cols-9 grid-rows-2 gap-1 p-1">
             {renderNameCell(home.name)}
             {home.sets.map((score, idx) =>
-              renderSetCell(score, idx, idx === home.currentSetIndex, "home")
+              renderSetCell(`home-set-${idx}`, score, idx, idx === home.currentSetIndex, "home")
             )}
             {Array.from({ length: 6 - home.sets.length }).map((_, idx) => (
               <div key={`home-empty-${idx}`} className="rounded-sm bg-muted" />
@@ -138,7 +140,7 @@ function ScoreboardApp() {
 
             {renderNameCell(away.name)}
             {away.sets.map((score, idx) =>
-              renderSetCell(score, idx, idx === away.currentSetIndex, "away")
+              renderSetCell(`away-set-${idx}`, score, idx, idx === away.currentSetIndex, "away")
             )}
             {Array.from({ length: 6 - away.sets.length }).map((_, idx) => (
               <div key={`away-empty-${idx}`} className="rounded-sm bg-muted" />
