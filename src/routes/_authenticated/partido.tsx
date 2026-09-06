@@ -62,7 +62,8 @@ const other = (which: Side): Side => (which === "home" ? "away" : "home");
 const withPlayer = (state: MatchState, which: Side, player: Player): MatchState =>
   which === "home" ? { ...state, home: player } : { ...state, away: player };
 
-// Gana el game: +1 al set activo del ganador y se reinician los puntos y el deuce.
+// Gana el game: +1 al set activo del ganador, se reinician puntos y deuce, y
+// se alterna la pelota de saque (local <-> visitante) al sumar el punto de set.
 function winGame(state: MatchState, which: Side): MatchState {
   const winner = state[which];
   const nextSets = [...winner.sets];
@@ -70,6 +71,7 @@ function winGame(state: MatchState, which: Side): MatchState {
   return {
     ...state,
     deuce: false,
+    serving: other(state.serving),
     home: { ...state.home, gamePoints: 0 },
     away: { ...state.away, gamePoints: 0 },
     [which]: { ...winner, sets: nextSets, gamePoints: 0 },
@@ -178,6 +180,10 @@ function ScoreboardApp() {
 
   // Celda de set: fondo azul eléctrico si está activo, azul marino si ya terminó.
   // Texto gris salvo el del ganador del set, que es blanco.
+  //
+  // NOTA TEMPORAL (2026-09-06): se deshabilitó el clic en las casillas del
+  // arreglo `record` (editar el set a mano). La acción "set" del reducer sigue
+  // disponible; para reactivar, volver a <button> y descomentar los handlers.
   const renderSetCell = (
     key: string,
     value: number,
@@ -186,20 +192,19 @@ function ScoreboardApp() {
     which: Side,
     won = false
   ) => (
-    <button
+    <div
       key={key}
-      type="button"
-      onClick={() => dispatch({ type: "set", which, setIndex, delta: 1 })}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        dispatch({ type: "set", which, setIndex, delta: -1 });
-      }}
-      className={`flex items-center justify-center rounded-sm text-lg font-bold transition-colors active:scale-95 ${
+      // onClick={() => dispatch({ type: "set", which, setIndex, delta: 1 })}
+      // onContextMenu={(e) => {
+      //   e.preventDefault();
+      //   dispatch({ type: "set", which, setIndex, delta: -1 });
+      // }}
+      className={`flex items-center justify-center rounded-sm text-lg font-bold transition-colors ${
         isActive ? "bg-set-active" : "bg-set-done"
       } ${won ? "text-white" : "text-muted-foreground"}`}
     >
       {value}
-    </button>
+    </div>
   );
 
   // Columnas 3-8 de la fila: fondo negro. La pelota aparece en la columna 3
