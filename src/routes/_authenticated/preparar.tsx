@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { limpiarSesion, obtenerSesion } from "@/lib/session";
 
 export const Route = createFileRoute("/_authenticated/preparar")({
   component: PrepararPage,
@@ -32,19 +32,10 @@ function PrepararPage() {
   const [sorteando, setSorteando] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("nombre").eq("id", user.id).maybeSingle();
-      if (!active) return;
-      const nombre = data?.nombre?.trim();
-      setNombreLocal(nombre && nombre.length > 0 ? nombre : (user.email ?? "Local").split("@")[0]!);
-    })();
-    return () => {
-      active = false;
-    };
+    const user = obtenerSesion();
+    if (!user) return;
+    const nombre = user.nombre?.trim();
+    setNombreLocal(nombre && nombre.length > 0 ? nombre : (user.email || "Local").split("@")[0]!);
   }, []);
 
   const sortear = () => {
@@ -80,8 +71,8 @@ function PrepararPage() {
     });
   };
 
-  const cerrarSesion = async () => {
-    await supabase.auth.signOut();
+  const cerrarSesion = () => {
+    limpiarSesion();
     navigate({ to: "/auth", replace: true });
   };
 

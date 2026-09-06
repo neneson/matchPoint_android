@@ -20,6 +20,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Datos locales de autenticación (JSON de usuarios, contraseñas cifradas)
+.matchpoint-auth/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

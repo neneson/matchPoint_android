@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { registrarUsuario, iniciarSesion } from "@/lib/local-auth";
+import { guardarSesion } from "@/lib/session";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -39,16 +40,22 @@ function AuthPage() {
     setError(null);
     setMessage(null);
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) {
-      setError("No pudimos ingresar. Revisa tu email y contraseña.");
-      return;
+    try {
+      const res = await iniciarSesion({ data: { email, password } });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      guardarSesion(res.user);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("recordarme", remember ? "1" : "0");
+      }
+      navigate({ to: "/preparar" });
+    } catch {
+      setError("No pudimos ingresar. Inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
     }
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("recordarme", remember ? "1" : "0");
-    }
-    navigate({ to: "/preparar" });
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -56,27 +63,20 @@ function AuthPage() {
     setError(null);
     setMessage(null);
     setLoading(true);
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/preparar`,
-        data: { nombre, rut },
-      },
-    });
-    setLoading(false);
-    if (signUpError) {
-      setError(signUpError.message.includes("already")
-        ? "Ese email ya está registrado. Prueba ingresando."
-        : "No pudimos crear la cuenta. Revisa los datos.");
-      return;
+    try {
+      const res = await registrarUsuario({ data: { nombre, rut, email, password } });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setMessage("Cuenta creada. Ya puedes ingresar.");
+      setPassword("");
+      setMode("login");
+    } catch {
+      setError("No pudimos crear la cuenta. Inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
     }
-    if (data.session) {
-      navigate({ to: "/preparar" });
-      return;
-    }
-    setMessage("Cuenta creada. Revisa tu correo para confirmarla y luego ingresa.");
-    setMode("login");
   };
 
   return (
