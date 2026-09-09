@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { limpiarSesion, obtenerSesion } from "@/lib/session";
+import { cerrarSesion as cerrarSesionSupabase, obtenerUsuarioActual } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated/preparar")({
   component: PrepararPage,
@@ -32,10 +32,15 @@ function PrepararPage() {
   const [sorteando, setSorteando] = useState(false);
 
   useEffect(() => {
-    const user = obtenerSesion();
-    if (!user) return;
-    const nombre = user.nombre?.trim();
-    setNombreLocal(nombre && nombre.length > 0 ? nombre : (user.email || "Local").split("@")[0]!);
+    let vivo = true;
+    obtenerUsuarioActual().then((user) => {
+      if (!vivo || !user) return;
+      const nombre = user.nombre?.trim();
+      setNombreLocal(nombre && nombre.length > 0 ? nombre : (user.email || "Local").split("@")[0]!);
+    });
+    return () => {
+      vivo = false;
+    };
   }, []);
 
   const sortear = () => {
@@ -71,8 +76,8 @@ function PrepararPage() {
     });
   };
 
-  const cerrarSesion = () => {
-    limpiarSesion();
+  const cerrarSesion = async () => {
+    await cerrarSesionSupabase();
     navigate({ to: "/auth", replace: true });
   };
 

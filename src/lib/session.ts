@@ -1,39 +1,15 @@
-import type { UsuarioPublico } from "./local-auth";
-
 /**
- * Sesión local del lado del cliente. Guarda en localStorage al usuario que
- * validó el login/registro contra el JSON local. No lleva token: solo marca
- * qué cuenta local está activa para los guards de las rutas.
+ * Sesión = sesión de Supabase Auth, persistida por `supabase-js` en el storage
+ * del cliente (localStorage dentro del WebView de Capacitor).
+ *
+ * Este módulo solo re-exporta los helpers de `auth.ts` que usan los guards de
+ * rutas, para no tocar todos los imports. Ya no hay una "sesión local" propia
+ * en localStorage: `guardarSesion` desapareció (Supabase la guarda solo).
  */
 
-const CLAVE_SESION = "mp_sesion";
-
-export function guardarSesion(user: UsuarioPublico): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(CLAVE_SESION, JSON.stringify(user));
-  } catch {
-    // localStorage no disponible: se ignora
-  }
-}
-
-export function obtenerSesion(): UsuarioPublico | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const crudo = window.localStorage.getItem(CLAVE_SESION);
-    if (!crudo) return null;
-    const user = JSON.parse(crudo) as UsuarioPublico;
-    return user && typeof user.email === "string" ? user : null;
-  } catch {
-    return null;
-  }
-}
-
-export function limpiarSesion(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(CLAVE_SESION);
-  } catch {
-    // se ignora
-  }
-}
+export type { UsuarioPublico } from "./auth";
+export {
+  obtenerUsuarioActual as obtenerSesion,
+  cerrarSesion as limpiarSesion,
+  haySesion,
+} from "./auth";

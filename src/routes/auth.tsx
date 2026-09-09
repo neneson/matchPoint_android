@@ -1,8 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { registrarUsuario, iniciarSesion } from "@/lib/local-auth";
-import { guardarSesion } from "@/lib/session";
+import { registrarUsuario, iniciarSesion, haySesion } from "@/lib/auth";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -41,12 +40,11 @@ function AuthPage() {
     setMessage(null);
     setLoading(true);
     try {
-      const res = await iniciarSesion({ data: { email, password } });
+      const res = await iniciarSesion({ email, password });
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      guardarSesion(res.user);
       if (typeof window !== "undefined") {
         window.localStorage.setItem("recordarme", remember ? "1" : "0");
       }
@@ -64,12 +62,18 @@ function AuthPage() {
     setMessage(null);
     setLoading(true);
     try {
-      const res = await registrarUsuario({ data: { nombre, rut, email, password } });
+      const res = await registrarUsuario({ nombre, rut, email, password });
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      setMessage("Cuenta creada. Ya puedes ingresar.");
+      // Si el proyecto no exige confirmar el email, el registro deja sesión
+      // activa y entramos directo; si la exige, volvemos al login.
+      if (await haySesion()) {
+        navigate({ to: "/preparar" });
+        return;
+      }
+      setMessage("Cuenta creada. Revisa tu email para confirmarla y luego ingresa.");
       setPassword("");
       setMode("login");
     } catch {
