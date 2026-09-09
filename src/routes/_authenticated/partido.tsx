@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/partido")({
@@ -25,10 +25,13 @@ const POINTS = ["0", "15", "30", "40", "GM"];//GM = Game
 const POINTS_TIEBREAK = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];//GM = Game
 const POINTS_DEUCE = ["DC", "AD", "GM"];//AD = Advantage, DC = Deuce, GM = Game
 const MAX_SETS = 3;
+// Al mejor de MAX_SETS: gana quien se lleve la mayoría de los sets, sin jugar el
+// resto (división entera de MAX_SETS/2, + 1). Con MAX_SETS = 3 → 2 sets.
+const SETS_TO_WIN = Math.floor(MAX_SETS / 2) + 1;
 const MAX_GAMES = 6;
 const MAX_GAMES_TIEBREAK = 7;
 const MAX_TIEBREAK_POINTS = 7;
-const MAX_SUPER_TIEBREAK_POINTS = 10;
+const MAX_SUPER_TIEBREAK_POINTS = 11;
 const MIN_TIEBREAK_DIFF = 2;
 const MIN_GAME_DIFF = 2;
 const MIN_SET_DIFF = 2;
@@ -189,20 +192,70 @@ function initMatch(search: { local: string; visitante: string; saca: "local" | "
   };
 }
 
+// Tiempo transcurrido del partido: "MM:SS" y, pasada la hora, "H:MM:SS".
+function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// Hora local en formato 24 h "HH:MM".
+function formatClock(ts: number): string {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function ScoreboardApp() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [state, dispatch] = useReducer(matchReducer, search, initMatch);
   const { home, away, serving, deuce, tiebreak } = state;
 
+  // Sets ya cerrados (ambos avanzan `currentSetIndex` juntos en `winGame`); solo
+  // esos cuentan para el marcador de sets.
+  const closedSets = home.currentSetIndex;
+  const homeSetsWon = home.sets
+    .slice(0, closedSets)
+    .reduce((count, v, i) => count + (v > (away.sets[i] ?? 0) ? 1 : 0), 0);
+  const awaySetsWon = away.sets
+    .slice(0, closedSets)
+    .reduce((count, v, i) => count + (v > (home.sets[i] ?? 0) ? 1 : 0), 0);
+
+  // Partido terminado: alguien llegó a SETS_TO_WIN (se declara ganador sin jugar
+  // el resto de los sets) o ya se jugaron los MAX_SETS sets.
+  const matchOver =
+    homeSetsWon >= SETS_TO_WIN || awaySetsWon >= SETS_TO_WIN || home.currentSetIndex >= MAX_SETS;
+  const matchWinnerName = homeSetsWon > awaySetsWon ? home.name : away.name;
+
+  // Reloj del partido. Se arranca en el cliente (evita desajuste de hidratación
+  // por SSR); `startedAt` marca el inicio y `now` avanza cada segundo.
+  // El tiempo transcurrido se congela al terminar el partido (`stoppedAtRef`
+  // captura el `now` de ese instante); la hora del reloj sigue corriendo.
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const t0 = Date.now();
+    setStartedAt(t0);
+    setNow(t0);
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const stoppedAtRef = useRef<number | null>(null);
+  if (matchOver && stoppedAtRef.current == null && startedAt != null) {
+    stoppedAtRef.current = now ?? Date.now();
+  }
+  const elapsedRef = stoppedAtRef.current ?? now;
+  const elapsed =
+    startedAt != null && elapsedRef != null ? formatElapsed(elapsedRef - startedAt) : "00:00";
+  const clock = now != null ? formatClock(now) : "--:--";
+
   // Etiqueta de puntos a mostrar: tie break > deuce > puntos normales.
   const pointsLabels = tiebreak ? POINTS_TIEBREAK : deuce ? POINTS_DEUCE : POINTS;
 
-  // Partido terminado: ya se jugaron los MAX_SETS sets. Gana quien ganó más sets.
-  const matchOver = home.currentSetIndex >= MAX_SETS;
-  const homeSetsWon = home.sets.reduce((count, v, i) => count + (v > (away.sets[i] ?? 0) ? 1 : 0), 0);
-  const awaySetsWon = away.sets.reduce((count, v, i) => count + (v > (home.sets[i] ?? 0) ? 1 : 0), 0);
-  const matchWinnerName = homeSetsWon > awaySetsWon ? home.name : away.name;
   const [modalDismissed, setModalDismissed] = useState(false);
   const modalOpen = matchOver && !modalDismissed;
 
@@ -262,7 +315,17 @@ function ScoreboardApp() {
         style={{ width: 340, height: 340 }}
       >
         <div className="absolute inset-[10px] overflow-hidden rounded-[2.2rem] bg-background">
-          <div className="grid h-[160px] w-[320px] grid-cols-9 grid-rows-2 gap-1 p-1">
+          <div className="grid h-[160px] w-[320px] grid-cols-9 grid-rows-[40px_60px_60px] gap-x-1">
+            {/* Fila 0 (40px): 3 bloques de 3 columnas. Izquierda = tiempo
+                transcurrido, derecha = hora 24 h. Fondo azul marino, texto gris. */}
+            <div className="col-span-3 flex items-center justify-center rounded-sm bg-navy pl-7 text-sm font-semibold tabular-nums text-muted-foreground">
+              {elapsed}
+            </div>
+            <div className="col-span-3 rounded-sm bg-navy" />
+            <div className="col-span-3 flex items-center justify-center rounded-sm bg-navy pr-7 text-sm font-semibold tabular-nums text-muted-foreground">
+              {clock}
+            </div>
+
             {/* Fila local: nombre (col 0-1), sets (col 2-4), columnas 5-8 negras */}
             {renderNameCell(home.name)}
             {Array.from({ length: MAX_SETS }, (_, i) => {
