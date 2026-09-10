@@ -6,8 +6,12 @@
         android:name="android.hardware.type.watch"
         android:required="true" />
 
-    <!-- Fase 4: mantener la pantalla encendida durante el partido. -->
+    <!-- Fase 4: ambient mode (always-on) durante el partido. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Fase 4: Ongoing Activity = notificación + servicio en primer plano. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:allowBackup="true"
@@ -37,6 +41,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Mantiene vivo el partido y lo publica en el watch face. `specialUse` porque
+             no encaja en ningún otro tipo: no es ejercicio medido ni sincronización de
+             datos, es un marcador que el usuario deja corriendo. -->
+        <service
+            android:name=".service.MatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Marcador de tenis visible mientras dura el partido" />
+        </service>
     </application>
 
 </manifest>

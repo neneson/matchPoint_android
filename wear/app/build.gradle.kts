@@ -6,6 +6,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 // Firma release con la MISMA keystore que la app de teléfono, si existe
@@ -80,10 +81,15 @@ dependencies {
     // Wear Compose Material3 + foundation (rotary, pantalla redonda, TimeText).
     implementation("androidx.wear.compose:compose-material3:1.5.6")
     implementation("androidx.wear.compose:compose-foundation:1.5.6")
-    implementation("androidx.wear.compose:compose-navigation:1.5.6")
     implementation("androidx.wear:wear-tooling-preview:1.0.0")
     // `androidx.wear:wear` trae AmbientLifecycleObserver (Fase 4).
     implementation("androidx.wear:wear:1.3.0")
+    // Ongoing Activity: el partido visible en el watch face mientras corre.
+    implementation("androidx.wear:wear-ongoing:1.0.0")
+
+    // Persistencia del partido (Fase 4). El estado se guarda serializado a JSON.
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling:1.8.2")
 

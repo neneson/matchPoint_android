@@ -62,16 +62,30 @@ botones van casi de borde a borde y lo que sobresale se redondea con la curva de
 respecto de `AXIS_SCROLL`. Verificado con capturas en el emulador redondo; falta un reloj
 cuadrado y uno físico.
 
-**Fase 4 — Sesión larga (1-2 días).** Lo crítico para un partido de 2 h:
-- **Ambient mode** (`AmbientLifecycleObserver`): versión de bajo consumo del marcador.
-- **Ongoing Activity** + foreground service: el partido queda visible en el watch face y
-  no se pierde el estado.
-- Persistir el partido (`DataStore`) para sobrevivir a que se apague la pantalla o la app.
+**Fase 4 — Sesión larga. ✅ HECHA (2026-09-10, ver `wear/docs/FASE-4.md`).**
+`AmbientLifecycleObserver` deja la actividad always-on y `AmbientScoreboard` la pinta en negro
+OLED, sin rellenos, con anti-quemado y **sin tick de 1 s** (en ambient el sistema despierta la
+app una vez por minuto). Eso resuelve el apagado a los ~15 s mejor que `KeepScreenOn()`.
+`MatchService` publica el marcador como **Ongoing Activity** desde un servicio en primer plano
+`specialUse` (targetSdk 35 exige tipo; `health` pediría permisos de sensores) y **lee el mismo
+DataStore que escribe el ViewModel**, sin binding ni segunda fuente de verdad; se detiene solo
+al terminar el partido. El partido se persiste como un JSON en una clave de DataStore, con
+`startedAt`/`stoppedAt` para que **el cronómetro también sobreviva**; un JSON de otra versión se
+descarta en vez de reventar. Dos tropiezos: `POST_NOTIFICATIONS` es permiso de ejecución en
+Wear 4+, y el servicio se mataba solo al arrancar porque el flujo emite `null` antes del primer
+guardado. **28 tests JVM verdes.** Falta medir consumo real en un reloj físico.
 
-**Fase 5 — Auth y teléfono (1-2 días, opcional).** El login Supabase en el reloj es mal UX
-(teclado de 1"). Opciones, en orden: (1) app *standalone* sin login, nombre del rival por
-voz/dictado; (2) **Data Layer API** (`MessageClient`/`DataClient`) para recibir el perfil y
-el token desde la app de teléfono ya existente; (3) Supabase directo en el reloj (último recurso).
+**Fase 5 — Auth y teléfono. ✅ HECHA con la opción (1) (2026-09-10, ver `wear/docs/FASE-5.md`).**
+`PrepararScreen`: app *standalone* **sin login**, dos nombres por dictado
+(`RecognizerIntent.ACTION_RECOGNIZE_SPEECH` — en Wear lo atiende el panel del sistema, con voz,
+teclado y escritura a mano; sin dependencias extra), sorteo del saque y "Empezar". Los nombres
+se recuerdan entre partidos. El arranque decide pantalla según el estado guardado (nuevo
+`MatchState.empezado`): partido a medias → marcador retomado, si no → preparar. Sin
+`SwipeDismissableNavHost` a propósito (el gesto de volver atrás sacaría del marcador en pleno
+partido); se quitó `compose-navigation`, que estaba sin uso. **32 tests JVM verdes.**
+**(2) Data Layer queda pendiente** y no es un detalle: obliga a meter un `WearableListenerService`
+en el `android/` de Capacitor, que **lo regenera `npx cap sync`** — habría que sacarlo a un plugin
+o a un árbol versionado aparte. **(3) descartada**, como decía el plan.
 
 **Fase 6 — Empaquetado (0.5 día).** Firmar con la keystore ya creada (`android/matchpoint-release.jks`),
 probar en reloj real (`adb connect <ip>:5555` por Wi-Fi). Para Play: subir como AAB con el

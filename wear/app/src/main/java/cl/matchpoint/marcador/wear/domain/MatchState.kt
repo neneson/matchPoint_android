@@ -1,5 +1,7 @@
 package cl.matchpoint.marcador.wear.domain
 
+import kotlinx.serialization.Serializable
+
 /**
  * Lógica de tenis portada 1:1 desde `src/routes/_authenticated/partido.tsx:24-193`
  * (la app web). Es Kotlin puro: sin Android, sin Compose, sin corrutinas — para que
@@ -10,11 +12,15 @@ package cl.matchpoint.marcador.wear.domain
  *     impedía el `disabled` del botón, no el reducer; aquí no hay botón que confiar.
  *  2. Las etiquetas de tie break se generan (el arreglo de la web llegaba sólo a "10",
  *     y sobre eso caía en el número crudo por el `??`).
- *  3. [Rules.superTiebreak] existe como opción apagada por defecto: en la web la
+ *  3. Las clases llevan `@Serializable`: desde la Fase 4 el partido se persiste en
+ *     DataStore tal cual, sin un DTO paralelo que se desincronice. kotlinx.serialization
+ *     es un plugin de compilación, así que el dominio sigue sin dependencias de Android.
+ *  4. [Rules.superTiebreak] existe como opción apagada por defecto: en la web la
  *     constante `MAX_SUPER_TIEBREAK_POINTS` está declarada pero **nunca se usa**.
  *     Con el valor por omisión el comportamiento es idéntico al de la web.
  */
 
+@Serializable
 enum class Side {
     HOME,
     AWAY;
@@ -23,6 +29,7 @@ enum class Side {
 }
 
 /** Reglas del partido. Los valores por defecto son los de la app web. */
+@Serializable
 data class Rules(
     val maxSets: Int = 3,
     val maxGames: Int = 6,
@@ -52,6 +59,7 @@ data class Rules(
     }
 }
 
+@Serializable
 data class Player(
     val name: String,
     /** Games ganados en cada set. Índice = número de set. */
@@ -66,6 +74,7 @@ data class Player(
 )
 
 /** Cómo empieza el partido. Equivale a los search params de la ruta `/partido`. */
+@Serializable
 data class MatchSetup(
     val local: String = "Local",
     val visitante: String = "Visitante",
@@ -73,6 +82,7 @@ data class MatchSetup(
     val rules: Rules = Rules.WEB,
 )
 
+@Serializable
 data class MatchState(
     val home: Player,
     val away: Player,
@@ -108,6 +118,15 @@ data class MatchState(
         get() = homeSetsWon >= rules.setsToWin ||
             awaySetsWon >= rules.setsToWin ||
             closedSets >= rules.maxSets
+
+    /**
+     * ¿Se jugó aunque sea un punto? Distingue un partido de verdad de uno recién creado,
+     * que es lo que decide si la app abre en el marcador o en la preparación.
+     */
+    val empezado: Boolean
+        get() = closedSets > 0 ||
+            home.gamePoints > 0 || away.gamePoints > 0 ||
+            home.sets.any { it > 0 } || away.sets.any { it > 0 }
 
     /** Ganador del partido, o `null` si sigue en juego. */
     val winner: Side?

@@ -52,7 +52,6 @@ import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.tooling.preview.devices.WearDevices
 import cl.matchpoint.marcador.wear.domain.MatchAction
-import cl.matchpoint.marcador.wear.domain.MatchSetup
 import cl.matchpoint.marcador.wear.domain.MatchState
 import cl.matchpoint.marcador.wear.domain.MatchViewModel
 import cl.matchpoint.marcador.wear.domain.Side
@@ -74,7 +73,10 @@ import kotlin.math.sqrt
  *  - **Deshacer es long-press** (en la web era clic derecho) y también corona.
  */
 @Composable
-fun ScoreboardScreen(vm: MatchViewModel = viewModel()) {
+fun ScoreboardScreen(
+    vm: MatchViewModel = viewModel(),
+    onNuevoPartido: () -> Unit = {},
+) {
     val match by vm.state.collectAsStateWithLifecycle()
     val elapsed by vm.elapsed.collectAsStateWithLifecycle()
     val haptics = LocalHapticFeedback.current
@@ -145,11 +147,10 @@ fun ScoreboardScreen(vm: MatchViewModel = viewModel()) {
     AlertDialog(
         visible = match.matchOver && !dialogoVisto,
         onDismissRequest = { dialogoVisto = true },
-        // Sin esto la app queda muerta al terminar el partido: el reloj no tiene el
-        // enlace "Nuevo match" de la web. Los nombres siguen siendo los por defecto
-        // hasta que exista la pantalla de preparación (Fase 5).
+        // Equivale al enlace "Nuevo match" de la web: vuelve a la preparación, donde se
+        // eligen nombres y saque (Fase 5).
         edgeButton = {
-            EdgeButton(onClick = { vm.nuevoPartido(MatchSetup()) }) { Text("Nuevo") }
+            EdgeButton(onClick = onNuevoPartido) { Text("Nuevo") }
         },
         title = {
             val ganador = match.winner?.let { match.of(it).name } ?: ""

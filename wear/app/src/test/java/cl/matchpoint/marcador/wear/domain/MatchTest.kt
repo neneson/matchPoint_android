@@ -290,6 +290,31 @@ class MatchTest {
         assertEquals(Side.HOME, reduce(reduce(s, MatchAction.ToggleServe), MatchAction.ToggleServe).serving)
     }
 
+    // --- ¿ya empezó? (decide si la app abre en el marcador o en la preparación) ---
+
+    @Test
+    fun `un partido recien creado no ha empezado`() {
+        assertFalse(estado().empezado)
+    }
+
+    @Test
+    fun `un solo punto ya cuenta como empezado`() {
+        assertTrue(estado().punto(Side.HOME).empezado)
+    }
+
+    @Test
+    fun `un game ganado cuenta aunque los puntos vuelvan a cero`() {
+        val s = estado().game(Side.HOME)
+        assertEquals(0, s.home.gamePoints)
+        assertTrue(s.empezado)
+    }
+
+    @Test
+    fun `deshacer hasta cero vuelve a dejarlo sin empezar`() {
+        val s = reduce(estado().punto(Side.HOME), MatchAction.UndoPoint(Side.HOME))
+        assertFalse(s.empezado)
+    }
+
     // --- cronómetro --------------------------------------------------------
 
     @Test
