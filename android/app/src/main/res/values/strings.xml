@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Matchpoint</string>
+    <string name="title_activity_main">Matchpoint</string>
+    <string name="package_name">cl.matchpoint.marcador</string>
+    <string name="custom_url_scheme">cl.matchpoint.marcador</string>
+</resources>

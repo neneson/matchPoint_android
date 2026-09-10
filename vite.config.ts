@@ -11,5 +11,15 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    // SPA mode: prerender solo el shell (todas las rutas ya son `ssr: false`) y
+    // escribirlo como `index.html` estático para empaquetar con Capacitor.
+    // Salida: `.output/public/index.html` (+ `assets/`). Ver capacitor.config.ts.
+    spa: {
+      enabled: true,
+      prerender: {
+        outputPath: "/index.html",
+        crawlLinks: false,
+      },
+    },
   },
 });
