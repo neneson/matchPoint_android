@@ -71,6 +71,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    // `viewModelScope` (cronómetro del partido) vive en -ktx, no en el artefacto base.
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
 
     implementation("androidx.compose.ui:ui:1.8.2")
     implementation("androidx.compose.ui:ui-tooling-preview:1.8.2")

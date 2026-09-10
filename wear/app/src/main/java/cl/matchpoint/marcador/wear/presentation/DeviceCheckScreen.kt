@@ -1,23 +1,31 @@
 package cl.matchpoint.marcador.wear.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import androidx.wear.tooling.preview.devices.WearDevices
+import cl.matchpoint.marcador.wear.domain.MatchAction
+import cl.matchpoint.marcador.wear.domain.MatchViewModel
+import cl.matchpoint.marcador.wear.domain.Side
 import cl.matchpoint.marcador.wear.presentation.theme.MatchpointColors
 import cl.matchpoint.marcador.wear.presentation.theme.MatchpointTheme
 import kotlin.math.sqrt
@@ -31,14 +39,21 @@ import kotlin.math.sqrt
  * - En pantalla redonda sólo se puede confiar en el **cuadrado inscrito**
  *   (lado = diámetro / raíz de 2). El resto lo corta el bisel, y ahí es donde
  *   hoy caen las esquinas de los dos botones de puntos.
+ *
+ * Desde la Fase 2 también hace de prueba de humo del [MatchViewModel]: si el
+ * cronómetro avanza y el marcador reacciona al toque, la lógica portada está viva
+ * dentro del reloj y no sólo en los tests de la JVM.
  */
 @Composable
-fun DeviceCheckScreen() {
+fun DeviceCheckScreen(vm: MatchViewModel = viewModel()) {
     val config = LocalConfiguration.current
     val widthDp = config.screenWidthDp
     val heightDp = config.screenHeightDp
     val isRound = config.isScreenRound
     val safeSquareDp = (minOf(widthDp, heightDp) / sqrt(2f)).toInt()
+
+    val match by vm.state.collectAsStateWithLifecycle()
+    val elapsed by vm.elapsed.collectAsStateWithLifecycle()
 
     Box(
         modifier = Modifier
@@ -71,6 +86,28 @@ fun DeviceCheckScreen() {
             Dato("Tamaño", "$widthDp x $heightDp dp")
             Dato("Área segura", "$safeSquareDp dp")
             Dato("Diseño web", "320 x 320 px")
+            Dato("Cronómetro", elapsed)
+            Dato(
+                "Marcador",
+                "${match.pointLabel(Side.HOME)} - ${match.pointLabel(Side.AWAY)}",
+            )
+        }
+
+        // Mitad izquierda / derecha: punto para local / visitante. Provisional,
+        // sólo para comprobar que el reducer responde en el reloj (la UI es Fase 3).
+        Row(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .clickable { vm.dispatch(MatchAction.Point(Side.HOME)) },
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .clickable { vm.dispatch(MatchAction.Point(Side.AWAY)) },
+            )
         }
     }
 }

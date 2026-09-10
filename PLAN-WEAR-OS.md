@@ -40,9 +40,14 @@ Kotlin 2.1.0 sobre JDK 17, `cl.matchpoint.marcador.wear`, minSdk 30 / targetSdk 
 teléfono. `assembleDebug` y `assembleRelease` OK; instalado y corriendo en el AVD sin crashes.
 Pendiente: activar R8 (21 MB de release sin minify).
 
-**Fase 2 — Lógica (1 día).** Port del reducer a `MatchState.kt` + `MatchViewModel` (`StateFlow`).
-Tests unitarios JVM de los casos que hoy no tienen cobertura: deuce, tie break 7-6,
-super tie break, cierre de set y fin de partido a 2 de 3.
+**Fase 2 — Lógica. ✅ HECHA (2026-09-10, ver `wear/docs/FASE-2.md`).** `domain/MatchState.kt`
+(port 1:1, Kotlin puro) + `domain/MatchViewModel.kt` (`StateFlow` + cronómetro que se congela al
+terminar). **25 tests JVM verdes**: deuce, tie break 7-6 y la diferencia de 2, cierre de set,
+fin de partido a 2 de 3, undo/reset/saque y `formatElapsed`. Probado además en el emulador
+(el reducer responde al toque dentro del reloj). Tres divergencias documentadas: el reducer
+ignora puntos con el partido terminado, las etiquetas de tie break se generan, y el **super
+tie break** pasa a ser `Rules.superTiebreak` apagado por defecto (en la web la constante
+estaba declarada pero nunca se usaba).
 
 **Fase 3 — UI del reloj (3-4 días).**
 - `AppScaffold`/`ScreenScaffold` + `TimeText` (reemplaza el reloj 24 h dibujado a mano;
