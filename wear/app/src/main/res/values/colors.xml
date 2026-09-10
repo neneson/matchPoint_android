@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Equivalentes sRGB de los tokens oklch de `src/styles.css` (misma paleta que la web). -->
+<resources>
+    <color name="background">#FF191A1F</color>
+    <!-- En ambient conviene negro OLED puro, no el gris azulado del fondo. -->
+    <color name="ambient_background">#FF000000</color>
+</resources>

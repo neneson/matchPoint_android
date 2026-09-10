@@ -1,0 +1,8 @@
+# Salidas de build de Gradle/Android: nunca se commitean.
+.gradle/
+build/
+local.properties
+captures/
+.cxx/
+*.iml
+.idea/
