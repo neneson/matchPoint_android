@@ -49,16 +49,18 @@ ignora puntos con el partido terminado, las etiquetas de tie break se generan, y
 tie break** pasa a ser `Rules.superTiebreak` apagado por defecto (en la web la constante
 estaba declarada pero nunca se usaba).
 
-**Fase 3 — UI del reloj (3-4 días).**
-- `AppScaffold`/`ScreenScaffold` + `TimeText` (reemplaza el reloj 24 h dibujado a mano;
-  el cronómetro del partido queda en la fila 0).
-- **Todo en `dp`, no px**: el diseño de 320×320 px es de un reloj antiguo; los actuales son
-  384×384 o 450×450 px (≈ 192-225 dp). Layout con pesos, no medidas fijas.
-- **Pantalla redonda**: los dos botones de puntos inferiores pierden esquinas → usar
-  `LocalConfiguration.isScreenRound` y recortar/insetar la grilla superior.
-- Toque = punto, **long-press = deshacer** (hoy es click derecho, no existe en el reloj).
-- **Corona/rotary** para navegar sets o corregir puntos; háptica en cada punto.
-- Diálogo de fin de partido → `AlertDialog` de Wear.
+**Fase 3 — UI del reloj. ✅ HECHA (2026-09-10, ver `wear/docs/FASE-3.md`).**
+`presentation/ScoreboardScreen.kt`, todo en dp con pesos, sin nada heredado de los 320 px.
+`AppScaffold` pone el `TimeText` del sistema y la fila 0 queda sólo con el cronómetro
+(no se usa `ScreenScaffold`: es para pantallas con scroll). Toque = punto, long-press =
+deshacer, corona = sumar/quitar al que saca, háptica en ambos, `AlertDialog` de Wear al
+terminar con un `EdgeButton` "Nuevo" (si no, la app quedaba muerta: el reloj no tiene el
+enlace *Nuevo match* de la web). Dos hallazgos: **el tablero y los botones necesitan
+tratamientos opuestos** para el bisel — el tablero se insetea con `r - √(r² - y²)`, los
+botones van casi de borde a borde y lo que sobresale se redondea con la curva del bisel
+(insetarlos igual dejaba dos tiras de 104 dp); y **`verticalScrollPixels` viene invertido**
+respecto de `AXIS_SCROLL`. Verificado con capturas en el emulador redondo; falta un reloj
+cuadrado y uno físico.
 
 **Fase 4 — Sesión larga (1-2 días).** Lo crítico para un partido de 2 h:
 - **Ambient mode** (`AmbientLifecycleObserver`): versión de bajo consumo del marcador.

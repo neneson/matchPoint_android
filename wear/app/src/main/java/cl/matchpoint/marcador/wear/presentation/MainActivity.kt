@@ -8,9 +8,11 @@ import androidx.wear.compose.material3.AppScaffold
 import cl.matchpoint.marcador.wear.presentation.theme.MatchpointTheme
 
 /**
- * Fase 1: el módulo Wear existe, compila y arranca. La pantalla que muestra es un
- * diagnóstico del reloj (ver [DeviceCheckScreen]); el marcador real llega en la
- * Fase 3, sobre la lógica portada a Kotlin en la Fase 2.
+ * Punto de entrada. `AppScaffold` es lo que pone el `TimeText` del sistema en el arco
+ * superior — por eso el marcador ya no dibuja la hora a mano como la web.
+ *
+ * No se usa `ScreenScaffold`: ése existe para pantallas con scroll (lleva indicador de
+ * posición y `ScrollInfoProvider`), y el marcador cabe entero sin desplazarse.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,7 +26,7 @@ class MainActivity : ComponentActivity() {
 fun WearApp() {
     MatchpointTheme {
         AppScaffold {
-            DeviceCheckScreen()
+            ScoreboardScreen()
         }
     }
 }
