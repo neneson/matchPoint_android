@@ -81,6 +81,18 @@ class MainActivity : ComponentActivity() {
     /**
      * Enciende o apaga el modo always-on. Registrar el observador tarde es válido: el
      * `Lifecycle` le reproduce los eventos hasta el estado actual.
+     *
+     * Apagarlo es lo que tiene trampa. `removeObserver` **no apaga nada**: cuando el
+     * observador recibió `ON_CREATE` ya le dijo al sistema "esta actividad es always-on"
+     * (`WearableActivityController.setAmbientEnabled()`, que no tiene contrario en la API),
+     * y quitarlo del `Lifecycle` sólo deja de mandarle eventos. Sin la línea de abajo, el
+     * reloj seguía encendiéndose en ambient con el partido **ya terminado** —justo el gasto
+     * que esta fase venía a quitar— y el apagado automático por ahorro de energía no hacía
+     * absolutamente nada. Lo único que lo suelta es el `onDestroy` del observador, que hay
+     * que invocar a mano; volver a añadirlo más tarde reconstruye el controlador y funciona.
+     *
+     * Se ve en logcat al entrar en ambient: `TaskAmbiactive` = la app manda (pantalla
+     * encendida), `TaskAmbientLite` = manda el reloj (es lo que debe salir sin partido).
      */
     private fun alwaysOn(activo: Boolean) {
         if (activo == alwaysOnActivo) return
@@ -88,6 +100,7 @@ class MainActivity : ComponentActivity() {
         if (activo) {
             lifecycle.addObserver(observadorAmbient)
         } else {
+            observadorAmbient.onDestroy(this)
             lifecycle.removeObserver(observadorAmbient)
             // Si el partido termina con el reloj ya en ambient hay que volver a la
             // pantalla normal; a partir de aquí el reloj se apaga como cualquier app.

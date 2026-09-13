@@ -43,6 +43,12 @@ val pantallaSiempre = enJuego && siempreEncendido && !ahorroActivo
 |---|---|
 | ![Ajuste encendido](img/fase6-ajuste-pantalla.png) | ![Ajuste apagado](img/fase6-ajuste-apagada.png) |
 
+Capturas tomadas del **APK release** corriendo en el emulador:
+
+| Preparar | Marcador | Ambient | Fin |
+|---|---|---|---|
+| ![Preparar](img/fase6-preparar.png) | ![Marcador](img/fase6-marcador.png) | ![Ambient](img/fase6-ambient.png) | ![Fin](img/fase6-fin.png) |
+
 ## 2. El cronómetro
 
 Es lo único de la app que despierta la CPU sin que el usuario toque nada. Tres reglas, en
@@ -94,10 +100,6 @@ En OLED un píxel negro no pide corriente, y el fondo es la superficie más gran
   único que revertir.*
 - Ambient: negro puro, sin rellenos de color, texto fino y gris, sin segundos, y
   desplazamiento anti-quemado de 9 posiciones si el reloj lo pide.
-
-| Marcador | Ambient |
-|---|---|
-| ![Marcador](img/fase6-marcador.png) | ![Ambient](img/fase6-ambient.png) |
 
 ## 5. Flash y recomposición
 
@@ -163,6 +165,29 @@ guardado del partido en ejecución.
 *corriendo el APK release*, no sólo compilándolo. Los dos caminos que se rompen en
 silencio son ambient y serialización, y ninguno de los dos da error.
 
+### Apagar el always-on no era quitar el observador
+
+Segundo bug del mismo estilo, y éste invalidaba media Fase 6. `alwaysOn(false)` hacía
+`lifecycle.removeObserver(observadorAmbient)`, que **no apaga nada**: cuando el observador
+recibió `ON_CREATE` ya llamó a `WearableActivityController.setAmbientEnabled()` —que no
+tiene contrario en la API: `AmbientDelegate` sólo expone `setAmbientEnabled()`— y quitarlo
+del `Lifecycle` se limita a dejar de mandarle eventos.
+
+Consecuencia medida: con el **partido ya terminado**, el reloj seguía encendiéndose en
+ambient y pintando el marcador, indefinidamente. Y el apagado automático por ahorro de
+energía no hacía absolutamente nada. Las dos cosas que este documento decía resolver.
+
+Lo único que suelta el always-on es el `onDestroy` del observador, invocado a mano antes de
+quitarlo:
+
+```kotlin
+observadorAmbient.onDestroy(this)
+lifecycle.removeObserver(observadorAmbient)
+```
+
+Volver a añadirlo más tarde reconstruye el controlador y funciona — comprobado empezando un
+segundo partido en la misma instancia de la actividad.
+
 ## Tests
 
 **39 tests JVM, todos verdes** (29 de dominio + 3 de serialización + 7 de batería).
@@ -192,6 +217,9 @@ AVD `matchpoint_wear` (454×454 redonda, android-34 wear). Lo de abajo se compro
   **sin** partido no hay receptor ni servicio en primer plano.
 - 4 puntos con la app delante → 0 actualizaciones de notificación; al salir al watch face,
   1 sola, con el marcador correcto, en canal `IMPORTANCE_LOW`, `vibrate=null`, `sound=null`.
+- **Always-on que se suelta:** con partido en curso el sistema dice `TaskAmbiactive` (manda
+  la app, pantalla encendida); al terminar el partido, `TaskAmbientLite` (manda el reloj).
+  Y al empezar otro partido sin salir de la app, `TaskAmbiactive` otra vez.
 - **En release:** el ambient propio se pinta (tras el arreglo de R8 de más arriba); un
   `am force-stop` a mitad de partido y reabrir devuelve el marcador **idéntico** con el
   cronómetro al día — o sea kotlinx.serialization sobrevive a la minificación; la Ongoing

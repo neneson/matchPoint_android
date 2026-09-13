@@ -26,10 +26,18 @@ estable para Compose, y estilos de texto como constantes.
 Instrucciones de instalación y de medición de batería en
 [`INSTALAR-EN-RELOJ.md`](INSTALAR-EN-RELOJ.md).
 
-Al probar ese APK apareció un bug que **sólo existe en release**: R8 rompía el always-on
-—la app se veía bien, pero al apagarse la pantalla salía el ambient genérico borroso del
-sistema en vez del nuestro—. Faltaban reglas de `proguard` para `androidx.wear.ambient`.
-Corregido y verificado. Detalle en `wear/docs/FASE-6.md`.
+Probar el APK corriendo (no sólo compilarlo) sacó **dos bugs** que no se ven de otra forma:
+
+1. **R8 rompía el ambient.** La app se veía bien, pero al apagarse la pantalla salía el
+   ambient genérico borroso del sistema en vez del nuestro. Faltaban reglas de `proguard`
+   para `androidx.wear.ambient`. Sólo pasaba en release.
+2. **Apagar el always-on no lo apagaba.** Quitar el observador de ambient no suelta la
+   pantalla: la API de Wear tiene `setAmbientEnabled()` y no tiene contrario. Con el
+   partido **ya terminado** el reloj seguía encendiéndose indefinidamente, y el apagado
+   automático por ahorro de energía no hacía nada — o sea, dos de las promesas de esta
+   misma tanda no se cumplían. Se arregla llamando a mano al `onDestroy` del observador.
+
+Ambos corregidos y verificados. Detalle en `wear/docs/FASE-6.md`.
 
 ## Estado
 

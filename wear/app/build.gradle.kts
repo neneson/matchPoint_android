@@ -31,7 +31,7 @@ android {
         // 1.0 = primera versión instalable en un reloj real: dominio + marcador + ambient
         // + persistencia + Fase 6 (batería). Subir `versionCode` en cada APK que salga de
         // aquí, o el reloj rechaza la instalación por "downgrade".
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0"
     }
 
