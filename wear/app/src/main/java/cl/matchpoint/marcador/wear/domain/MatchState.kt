@@ -310,3 +310,16 @@ fun formatElapsed(ms: Long): String {
     val ss = s.toString().padStart(2, '0')
     return if (h > 0) "$h:$mm:$ss" else "$mm:$ss"
 }
+
+/**
+ * Tiempo del partido **sin segundos**, `H:MM`. Es el formato del modo ambient: ahí el
+ * sistema sólo despierta la app una vez por minuto, así que unos segundos dibujados en
+ * pantalla estarían mintiendo hasta 59 s — y cada dígito extra es tinta encendida en un
+ * OLED que va a estar así dos horas.
+ */
+fun formatElapsedCorto(ms: Long): String {
+    val total = maxOf(0L, ms / 1000)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    return "$h:${m.toString().padStart(2, '0')}"
+}

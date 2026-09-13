@@ -87,7 +87,12 @@ partido); se quitó `compose-navigation`, que estaba sin uso. **32 tests JVM ver
 en el `android/` de Capacitor, que **lo regenera `npx cap sync`** — habría que sacarlo a un plugin
 o a un árbol versionado aparte. **(3) descartada**, como decía el plan.
 
-**Fase 6 — Empaquetado (0.5 día).** Firmar con la keystore ya creada (`android/matchpoint-release.jks`),
+**Fase 6 — Batería. ✅ HECHA (2026-09-13, ver `wear/docs/FASE-6.md`).** El always-on pasa a
+ser opcional y se cae solo en ahorro de energía; el cronómetro no cuenta si nadie lo mira;
+la notificación es local, silenciosa y sólo se actualiza con la app en segundo plano;
+paleta OLED-negra; R8 (23,3 MB → 2,5 MB). 39 tests JVM, 7 de ellos de batería.
+
+**Fase 7 — Empaquetado (0.5 día).** Firmar con la keystore ya creada (`android/matchpoint-release.jks`),
 probar en reloj real (`adb connect <ip>:5555` por Wi-Fi). Para Play: subir como AAB con el
 form factor Wear OS declarado; requiere ficha, capturas de reloj y pasar la revisión de calidad Wear.
 
@@ -95,7 +100,8 @@ form factor Wear OS declarado; requiere ficha, capturas de reloj y pasar la revi
 
 - **No hay reloj Wear OS físico verificado** en el entorno; el emulador no valida ambient
   ni consumo real de batería.
-- La **paleta actual es oscura pero no OLED-negra**: en ambient conviene fondo `#000000` puro.
+- ~~La **paleta actual es oscura pero no OLED-negra**~~: resuelto en la Fase 6 (fondo y
+  botones casi negros, ambient `#000000`).
 - Play exige que la app Wear cumpla las guidelines; una v1 por **sideload** evita ese bloqueo.
 - No commitear: el repo está sincronizado con Lovable (ver `AGENTS.md`), un módulo `wear/`
   en la rama conectada puede confundir al editor. Trabajar en rama aparte.

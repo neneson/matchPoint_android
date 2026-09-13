@@ -35,21 +35,27 @@ import cl.matchpoint.marcador.wear.presentation.theme.MatchpointTheme
  *  - **Sin rellenos de color**: las celdas de set pasan a texto, la pelota de saque a un
  *    punto. Menos píxeles encendidos.
  *  - **Texto fino y gris**, no blanco en negrita: menos corriente y menos riesgo de
- *    quemado.
+ *    quemado. El marcador (lo que de verdad hay que leer de reojo entre punto y punto)
+ *    va algo más claro que los nombres.
+ *  - **Sin segundos** en el cronómetro: el sistema sólo despierta la app una vez por
+ *    minuto, así que un contador de segundos estaría mintiendo — y son dos dígitos
+ *    encendidos durante dos horas.
  *  - Contra el quemado, si el reloj lo pide ([burnInProtection]) todo se desplaza unos
- *    píxeles cada minuto, siguiendo el minuto del cronómetro.
+ *    píxeles cada minuto, siguiendo [minuto] (el contador real de `onUpdateAmbient`, no
+ *    los dígitos del texto).
  */
 @Composable
 fun AmbientScoreboard(
     match: MatchState,
     elapsed: String,
     burnInProtection: Boolean,
+    minuto: Int,
     modifier: Modifier = Modifier,
 ) {
-    // Desplazamiento anti-quemado: 4 posiciones que van rotando con los minutos.
-    val paso = if (burnInProtection) elapsed.filter { it.isDigit() }.lastOrNull()?.digitToInt() ?: 0 else 0
-    val dx = ((paso % 3) - 1) * 2
-    val dy = ((paso / 3 % 3) - 1) * 2
+    // Desplazamiento anti-quemado: 9 posiciones en rejilla, una por minuto.
+    val paso = if (burnInProtection) minuto.mod(9) else 4
+    val dx = ((paso % 3) - 1) * 3
+    val dy = ((paso / 3) - 1) * 3
 
     Box(
         modifier = modifier
@@ -67,7 +73,7 @@ fun AmbientScoreboard(
             Text(
                 text = elapsed,
                 color = AMBIENT_TENUE,
-                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Light),
+                style = ESTILO_RELOJ,
             )
             FilaAmbient(match, Side.HOME)
             FilaAmbient(match, Side.AWAY)
@@ -92,19 +98,32 @@ private fun FilaAmbient(match: MatchState, which: Side) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(end = 6.dp),
-            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Light),
+            style = ESTILO_NOMBRE,
         )
         Text(
             text = "$sets   ${match.pointLabel(which)}",
             color = AMBIENT_CLARO,
-            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal),
+            style = ESTILO_MARCADOR,
         )
     }
 }
 
-/** Grises: en ambient no se usa blanco puro ni colores de marca. */
-private val AMBIENT_TENUE = Color(0xFF8A8A8A)
-private val AMBIENT_CLARO = Color(0xFFD0D0D0)
+/**
+ * Grises: en ambient no se usa blanco puro ni colores de marca.
+ *
+ * [AMBIENT_TENUE] baja a un gris más oscuro que antes — son los nombres, que uno ya sabe
+ * de memoria. [AMBIENT_CLARO] es el marcador y **no** se baja más: en una cancha a pleno
+ * sol hay que poder leerlo de un vistazo, y ahorrar batería a costa de eso sería cambiar
+ * la app por una peor.
+ */
+private val AMBIENT_TENUE = Color(0xFF6E6E6E)
+private val AMBIENT_CLARO = Color(0xFFCCCCCC)
+
+/** Constantes y no `TextStyle(...)` dentro del `@Composable`: en ambient se recompone
+ *  una vez por minuto, dos horas seguidas, y estos objetos son siempre los mismos. */
+private val ESTILO_RELOJ = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Light)
+private val ESTILO_NOMBRE = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Light)
+private val ESTILO_MARCADOR = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal)
 
 @Preview(device = WearDevices.LARGE_ROUND, showSystemUi = true)
 @Composable
@@ -112,8 +131,9 @@ private fun AmbientPreview() {
     MatchpointTheme {
         AmbientScoreboard(
             match = MatchState.new(),
-            elapsed = "1:24:07",
+            elapsed = "1:24",
             burnInProtection = true,
+            minuto = 3,
         )
     }
 }

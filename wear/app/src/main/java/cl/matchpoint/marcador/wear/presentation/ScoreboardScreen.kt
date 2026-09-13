@@ -2,7 +2,9 @@
 
 package cl.matchpoint.marcador.wear.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.StateFlow
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.MaterialTheme
@@ -71,6 +74,11 @@ import kotlin.math.sqrt
  *  - **Pantalla redonda**: el tablero se mete hacia adentro lo que le come el bisel a
  *    su altura (ver [insetCircular]); los botones de puntos dejan margen abajo.
  *  - **Deshacer es long-press** (en la web era clic derecho) y también corona.
+ *
+ * Batería (Fase 6): el cronómetro cambia una vez por segundo y el marcador casi nunca.
+ * Por eso `elapsed` **no** se lee aquí sino dentro de [Cronometro], el único `Text` que
+ * depende de él. Leerlo en este nivel obligaba a recomponer cada segundo el tablero
+ * entero, las seis celdas de set y los dos botones de 40 sp.
  */
 @Composable
 fun ScoreboardScreen(
@@ -78,7 +86,6 @@ fun ScoreboardScreen(
     onNuevoPartido: () -> Unit = {},
 ) {
     val match by vm.state.collectAsStateWithLifecycle()
-    val elapsed by vm.elapsed.collectAsStateWithLifecycle()
     val haptics = LocalHapticFeedback.current
     val redonda = LocalConfiguration.current.isScreenRound
 
@@ -116,7 +123,7 @@ fun ScoreboardScreen(
 
             Tablero(
                 match = match,
-                elapsed = elapsed,
+                elapsed = vm.elapsed,
                 modifier = Modifier
                     .padding(horizontal = insetTablero)
                     .fillMaxWidth()
@@ -160,6 +167,9 @@ fun ScoreboardScreen(
             )
         },
         text = {
+            // El cronómetro ya está congelado cuando se ve este diálogo, así que aquí sí
+            // sale gratis leerlo directo.
+            val elapsed by vm.elapsed.collectAsStateWithLifecycle()
             Text(
                 text = "${match.homeSetsWon} - ${match.awaySetsWon} en sets · $elapsed",
                 textAlign = TextAlign.Center,
@@ -171,7 +181,11 @@ fun ScoreboardScreen(
 
 /** Fila 0 (cronómetro) + fila del local + fila del visitante. */
 @Composable
-private fun Tablero(match: MatchState, elapsed: String, modifier: Modifier = Modifier) {
+private fun Tablero(
+    match: MatchState,
+    elapsed: StateFlow<String>,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         // Fila 0: en la web eran cronómetro | vacío | hora. La hora ahora la pinta
         // `TimeText`, así que queda el cronómetro centrado sobre fondo azul marino.
@@ -183,16 +197,26 @@ private fun Tablero(match: MatchState, elapsed: String, modifier: Modifier = Mod
                 .background(MatchpointColors.navy),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = elapsed,
-                color = MatchpointColors.mutedForeground,
-                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
-            )
+            Cronometro(elapsed)
         }
 
         FilaJugador(match, Side.HOME, Modifier.weight(1f))
         FilaJugador(match, Side.AWAY, Modifier.weight(1f))
     }
+}
+
+/**
+ * El único trozo de pantalla que cambia cada segundo. Recibe el flujo, no el texto, para
+ * que la suscripción —y por tanto la recomposición— empiece y termine aquí dentro.
+ */
+@Composable
+private fun Cronometro(flujo: StateFlow<String>) {
+    val elapsed by flujo.collectAsStateWithLifecycle()
+    Text(
+        text = elapsed,
+        color = MatchpointColors.mutedForeground,
+        style = ESTILO_CRONOMETRO,
+    )
 }
 
 /** Nombre · un recuadro por set · pelota de saque. Todo por pesos, sin anchos fijos. */
@@ -212,7 +236,7 @@ private fun FilaJugador(match: MatchState, which: Side, modifier: Modifier = Mod
             color = MatchpointColors.foreground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+            style = ESTILO_NOMBRE,
         )
 
         repeat(match.rules.maxSets) { i ->
@@ -261,12 +285,19 @@ private fun CeldaSet(games: Int, enJuego: Boolean, ganado: Boolean, modifier: Mo
         Text(
             text = games.toString(),
             color = if (ganado) MatchpointColors.accent else MatchpointColors.mutedForeground,
-            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+            style = ESTILO_SET,
         )
     }
 }
 
-/** Los dos botones grandes: toque = punto, mantener = deshacer. */
+/**
+ * Los dos botones grandes: toque = punto, mantener = deshacer.
+ *
+ * Batería (Fase 6): entre los dos ocupan casi la mitad de la pantalla, así que su relleno
+ * es lo que más corriente pide del OLED en modo interactivo. Van casi negros
+ * ([MatchpointColors.card]) con un contorno que marca dónde tocar: el número de 40 sp ya
+ * dice de sobra dónde está cada botón, y el relleno claro anterior no aportaba nada.
+ */
 @Composable
 private fun BotonesDePunto(
     match: MatchState,
@@ -290,6 +321,7 @@ private fun BotonesDePunto(
                     .fillMaxSize()
                     .clip(forma)
                     .background(MatchpointColors.card)
+                    .border(BorderStroke(1.dp, MatchpointColors.cardBorder), forma)
                     .combinedClickable(
                         enabled = !match.matchOver,
                         onClick = { onPunto(side) },
@@ -301,7 +333,7 @@ private fun BotonesDePunto(
                     text = match.pointLabel(side),
                     color = MatchpointColors.cardForeground,
                     maxLines = 1,
-                    style = TextStyle(fontSize = 40.sp, fontWeight = FontWeight.Bold),
+                    style = ESTILO_PUNTOS,
                 )
             }
         }
@@ -348,6 +380,16 @@ private fun Modifier.rotaryCorrigePuntos(
 }
 
 private const val UMBRAL_CORONA = 40f
+
+/**
+ * Estilos de texto como constantes y no como `TextStyle(...)` dentro del `@Composable`.
+ * Batería: el cronómetro recompone una vez por segundo durante dos horas, y construir ahí
+ * el `TextStyle` eran 7.200 objetos que sólo servían para darle trabajo al recolector.
+ */
+private val ESTILO_CRONOMETRO = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+private val ESTILO_NOMBRE = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+private val ESTILO_SET = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold)
+private val ESTILO_PUNTOS = TextStyle(fontSize = 40.sp, fontWeight = FontWeight.Bold)
 
 /**
  * Cuánto se come el bisel de un borde horizontal que está a [distanciaAlCentro] del

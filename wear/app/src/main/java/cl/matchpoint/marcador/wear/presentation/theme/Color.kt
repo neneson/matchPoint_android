@@ -8,9 +8,22 @@ import androidx.compose.ui.graphics.Color
  * poder comparar pantalla contra pantalla.
  */
 object MatchpointColors {
-    val background = Color(0xFF191A1F)
+    /**
+     * Negro puro, no el `#191A1F` de la web. En un OLED cada píxel apagado es corriente
+     * que no se pide, y el fondo es la superficie más grande de la pantalla: es el ahorro
+     * más barato que hay, y a simple vista no se distingue del gris de la web.
+     */
+    val background = Color(0xFF000000)
     val foreground = Color(0xFFFCFCFC)
-    val card = Color(0xFF2C2E33)
+
+    /**
+     * Relleno de los dos botones de punto. Era `#2C2E33` cubriendo media pantalla; ahora
+     * es casi negro y el botón se delimita con [cardBorder]. **Si algún día se prefiere el
+     * aspecto de la web por encima de la batería, estos dos valores son lo único que hay
+     * que revertir.**
+     */
+    val card = Color(0xFF0B0C0F)
+    val cardBorder = Color(0xFF2C2E33)
     val cardForeground = Color(0xFFFCFCFC)
     val primary = Color(0xFF1779E1)
     val secondary = Color(0xFF383A40)

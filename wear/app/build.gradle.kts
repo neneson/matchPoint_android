@@ -45,7 +45,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 encendido (Fase 6). No es sólo tamaño de APK: menos dex que verificar y
+            // cargar en el arranque, y el `-optimize` inlinea la maraña de lambdas que
+            // genera Compose. En un reloj el arranque de la app es un pico de CPU medible.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystorePropsFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
@@ -65,6 +69,16 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+// Estabilidad de Compose (Fase 6). `MatchState` contiene `List<Int>`, y para el compilador
+// una `List` es inestable: sin esto ningún trozo del marcador puede saltarse la
+// recomposición aunque el partido no haya cambiado. Las clases del dominio son
+// inmutables de verdad (`data class` con `val`), pero no se pueden anotar con `@Immutable`
+// sin meterle Compose al dominio, que es Kotlin puro y se prueba en la JVM. El archivo de
+// configuración dice lo mismo desde fuera.
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability.conf"))
 }
 
 dependencies {
@@ -94,4 +108,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling:1.8.2")
 
     testImplementation("junit:junit:4.13.2")
+    // Reloj virtual: es la única forma de comprobar que el cronómetro NO despierta.
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }

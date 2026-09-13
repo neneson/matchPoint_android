@@ -51,11 +51,19 @@ import kotlin.random.Random
  *
  * Los nombres se recuerdan de un partido al siguiente: dictar cuesta, y normalmente se
  * juega contra el mismo rival.
+ *
+ * Batería (Fase 6): aquí vive además el único ajuste de la app, [siempreEncendido]. Es el
+ * interruptor más caro que existe —mantener el OLED encendido las dos horas del partido
+ * contra dejar que el reloj se apague y despierte al levantar la muñeca— y por eso se
+ * pregunta antes de empezar, cuando el usuario todavía sabe si va a jugar un set suelto o
+ * un partido largo con la batería a medias.
  */
 @Composable
 fun PrepararScreen(
     nombreLocal: String,
     nombreRival: String,
+    siempreEncendido: Boolean = true,
+    onSiempreEncendido: (Boolean) -> Unit = {},
     onEmpezar: (MatchSetup) -> Unit,
 ) {
     val contexto = LocalContext.current
@@ -138,6 +146,24 @@ fun PrepararScreen(
                     colors = ButtonDefaults.filledTonalButtonColors(),
                 ) {
                     Text("Sortear saque", style = TextStyle(fontSize = 13.sp))
+                }
+            }
+
+            item {
+                // El texto dice la consecuencia, no el nombre técnico del modo: "ambient"
+                // no le dice nada a nadie y "always-on" tampoco.
+                Button(
+                    onClick = {
+                        onSiempreEncendido(!siempreEncendido)
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.filledTonalButtonColors(),
+                ) {
+                    Column2(
+                        etiqueta = "Pantalla",
+                        valor = if (siempreEncendido) "Siempre encendida" else "Se apaga (ahorra)",
+                    )
                 }
             }
 
