@@ -20,6 +20,17 @@ Además: escrituras en flash confladas y sin reescrituras idénticas, cronómetr
 su propio `Text` para no recomponer el marcador entero cada segundo, dominio marcado como
 estable para Compose, y estilos de texto como constantes.
 
+## APK listo para el reloj
+
+`matchpoint-wear-1.0.apk` en la raíz (2,6 MB, firmado con la keystore del teléfono).
+Instrucciones de instalación y de medición de batería en
+[`INSTALAR-EN-RELOJ.md`](INSTALAR-EN-RELOJ.md).
+
+Al probar ese APK apareció un bug que **sólo existe en release**: R8 rompía el always-on
+—la app se veía bien, pero al apagarse la pantalla salía el ambient genérico borroso del
+sistema en vez del nuestro—. Faltaban reglas de `proguard` para `androidx.wear.ambient`.
+Corregido y verificado. Detalle en `wear/docs/FASE-6.md`.
+
 ## Estado
 
 - **39 tests JVM verdes.** 7 son específicos de batería: cuentan despertares del cronómetro
@@ -28,7 +39,8 @@ estable para Compose, y estilos de texto como constantes.
 - Verificado en el emulador `matchpoint_wear`: el ajuste alterna y persiste tras un
   arranque en frío; con always-on apagado la app se va al fondo, con él encendido sigue
   pintando el marcador en ambient; sin partido no hay servicio ni receptores registrados.
-- Compila y firma release (`./gradlew assembleRelease`).
+- **El APK release probado corriendo**, no sólo compilando: ambient propio, partido que
+  sobrevive a un `force-stop`, Ongoing Activity correcta, cero crashes.
 
 ## Lo que falta
 

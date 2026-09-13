@@ -125,9 +125,43 @@ Compose. En un reloj el arranque de la app es un pico de CPU medible.
 
 **23,3 MB → 2,5 MB** (−89 %).
 
-`proguard-rules.pro` sólo tiene que salvar kotlinx.serialization: los `$$serializer` se
-generan en compilación y se alcanzan por reflexión, y una regresión ahí no rompe el build
-sino el guardado del partido en ejecución.
+### El ambient se rompía sólo en release
+
+Encender R8 **rompió el always-on**, y de la peor manera: la app compilaba, instalaba,
+corría y se veía perfecta. Sólo al apagarse la pantalla, en vez de `AmbientScoreboard`
+aparecía el ambient genérico del sistema — una foto borrosa y atenuada de la app con el
+reloj encima. En debug no pasaba.
+
+Cómo se ve en logcat al entrar en ambient (`adb shell input keyevent 223`):
+
+```
+# roto
+AmbientTaskStateMachine: TaskInteractive -> TaskAmbientLite. Reason: ... is eligible for ambient lite
+# sano
+AmbientTaskStateMachine: TaskInteractive -> TaskAmbiactive. Reason: ... is not eligible for ambient lite
+```
+
+La causa: `AmbientLifecycleObserver` termina en `WearableControllerProvider$1`, que hereda
+de `com.google.android.wearable.compat.WearableActivityController$AmbientCallback` —clase
+de la librería compartida que entra por `<uses-library required="false">`— y cuyos métodos
+llama el sistema **por nombre**. El aar de `androidx.wear:wear:1.3.0` trae su propia regla
+(`-keep,allowoptimization class androidx.wear.ambient.* { public *; }`) y **no alcanza**.
+
+Arreglo en `proguard-rules.pro`:
+
+```proguard
+-keep class androidx.wear.ambient.** { *; }
+-keep class com.google.android.wearable.** { *; }
+-dontwarn com.google.android.wearable.**
+```
+
+El resto de `proguard-rules.pro` salva kotlinx.serialization: los `$$serializer` se generan
+en compilación y se alcanzan por reflexión, y una regresión ahí no rompe el build sino el
+guardado del partido en ejecución.
+
+**Moraleja, anotada aquí porque va a volver a pasar:** en Wear, R8 hay que probarlo
+*corriendo el APK release*, no sólo compilándolo. Los dos caminos que se rompen en
+silencio son ambient y serialización, y ninguno de los dos da error.
 
 ## Tests
 
@@ -148,7 +182,8 @@ simulan las dos horas del partido en milisegundos reales.
 
 ## Verificado en el emulador
 
-AVD `matchpoint_wear` (454×454 redonda, android-34 wear):
+AVD `matchpoint_wear` (454×454 redonda, android-34 wear). Lo de abajo se comprobó con el
+**APK release** (R8 activo), que es lo que se va a instalar en el reloj:
 
 - El ajuste se ve, alterna y **sobrevive a un arranque en frío** de la app.
 - Con el ajuste apagado, el gesto de palma manda la app al fondo y sale el watch face.
@@ -157,6 +192,10 @@ AVD `matchpoint_wear` (454×454 redonda, android-34 wear):
   **sin** partido no hay receptor ni servicio en primer plano.
 - 4 puntos con la app delante → 0 actualizaciones de notificación; al salir al watch face,
   1 sola, con el marcador correcto, en canal `IMPORTANCE_LOW`, `vibrate=null`, `sound=null`.
+- **En release:** el ambient propio se pinta (tras el arreglo de R8 de más arriba); un
+  `am force-stop` a mitad de partido y reabrir devuelve el marcador **idéntico** con el
+  cronómetro al día — o sea kotlinx.serialization sobrevive a la minificación; la Ongoing
+  Activity publica `30 - 15` / `0-0 0-0 0-0`; cero crashes.
 
 ## Pendiente
 

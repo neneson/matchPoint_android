@@ -28,8 +28,11 @@ android {
         // Wear OS 3 en adelante. Los relojes con Wear OS 2 (API 28) quedan fuera.
         minSdk = 30
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1"
+        // 1.0 = primera versión instalable en un reloj real: dominio + marcador + ambient
+        // + persistencia + Fase 6 (batería). Subir `versionCode` en cada APK que salga de
+        // aquí, o el reloj rechaza la instalación por "downgrade".
+        versionCode = 2
+        versionName = "1.0"
     }
 
     if (keystorePropsFile.exists()) {
